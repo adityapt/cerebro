@@ -1,0 +1,95 @@
+# Complex MMM with NumPyro SVI, Weibull adstock, hierarchical structure
+name: "Advanced Multi-Region MMM"
+description: "Production-grade MMM with flexible transformations and regional hierarchy"
+version: "2.0"
+
+outcome: "target_visits"
+time_unit: "week"
+date_column: "weekid"
+
+channels:
+  - name: "search"
+    data_analysis:
+      autocorrelation: "decays slowly over 8 weeks with flexible shape"
+      spending_pattern: "strong diminishing returns observed"
+      variance: 1234.56
+    transform:
+      adstock:
+        type: "weibull"
+        max_lag: 8
+        alpha_prior: "beta(3, 3)"
+        beta_prior: "half_normal(2)"
+        reasoning: "Weibull allows flexible decay shape to capture delayed effects"
+      saturation:
+        type: "hill"
+        k_prior: "half_normal(1)"
+        s_prior: "gamma(3, 1)"
+        reasoning: "Clear S-curve pattern in spend vs outcome scatter plot"
+  
+  - name: "tv"
+    data_analysis:
+      autocorrelation: "peaks at lag 2, then decays"
+      spending_pattern: "logarithmic diminishing returns"
+    transform:
+      adstock:
+        type: "delayed"
+        max_lag: 4
+        theta_prior: "uniform(0, 0.5)"
+        delay_prior: "discrete_uniform(1, 4)"
+        reasoning: "TV effects peak 1-2 weeks after airing"
+      saturation:
+        type: "logistic"
+        reasoning: "Sharp inflection point in spending curve"
+  
+  - name: "social"
+    transform:
+      adstock:
+        type: "geometric"
+        max_lag: 3
+        reasoning: "Social effects decay quickly"
+      saturation:
+        type: "hill"
+  
+  - name: "display"
+    transform:
+      adstock:
+        type: "carryover"
+        max_lag: 6
+      saturation:
+        type: "exponential"
+
+controls:
+  - "price_index"
+  - "macro_index"
+  - "competitor_activity"
+
+hierarchy:
+  dimension: "region"
+  levels: ["US", "CA", "EU"]
+  pooling: "hierarchical"
+
+priors:
+  baseline: "normal(log(1000), 0.5)"
+  channel_effects: "half_normal(0.5)"
+  control_effects: "normal(0, 0.3)"
+  regional_variance: "half_cauchy(1)"
+  sigma: "half_normal(50)"
+
+inference:
+  backend: "numpyro_svi"
+  optimizer: "adam"
+  lr: 0.01
+  num_steps: 50000
+  num_particles: 10
+  reasoning: "Large dataset (10K+ rows) with hierarchical structure → SVI for speed"
+
+evaluation:
+  metrics: ["loo", "r2", "mape", "experiment_calibration"]
+  holdout_periods: 12
+
+data_insights:
+  n_observations: 1000
+  date_range: "2023-01-01 to 2024-11-22"
+  missing_data: "none"
+  outliers: "2 observations flagged, capped at 99th percentile"
+

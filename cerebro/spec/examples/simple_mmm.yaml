@@ -1,0 +1,47 @@
+# Simple MMM with 2 channels
+name: "Simple Search + Social MMM"
+description: "Basic MMM model with geometric adstock and hill saturation"
+version: "1.0"
+
+outcome: "bookings"
+time_unit: "week"
+
+channels:
+  - name: "search_spend"
+    transform:
+      adstock:
+        type: "geometric"
+        max_lag: 6
+        alpha_prior: "beta(2, 2)"
+      saturation:
+        type: "hill"
+        k_prior: "half_normal(1)"
+        s_prior: "gamma(3, 1)"
+  
+  - name: "social_spend"
+    transform:
+      adstock:
+        type: "geometric"
+        max_lag: 4
+      saturation:
+        type: "hill"
+
+controls:
+  - "price_index"
+  - "seasonality"
+
+priors:
+  baseline: "normal(0, 1)"
+  channel_effects: "half_normal(0.5)"
+  control_effects: "normal(0, 0.5)"
+  sigma: "half_normal(100)"
+
+inference:
+  backend: "pymc"
+  num_warmup: 1000
+  num_samples: 1000
+  num_chains: 4
+
+evaluation:
+  metrics: ["loo", "r2", "mape"]
+
