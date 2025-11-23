@@ -1,106 +1,334 @@
 #!/usr/bin/env python
 """
-Cerebro CLI - Command-line interface for autonomous MMM agent
+Cerebro CLI - Command-line interface for autonomous product and marketing analytics
+
+Commands:
+    auto        - Autonomous analysis generation from data (spec + code)
+    generate    - Generate code from existing spec
+    validate    - Validate generated code with execution feedback
 """
 
 import sys
 import argparse
+import logging
 from pathlib import Path
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s: %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+def cmd_auto(args):
+    """
+    Autonomous Analytics: Data → Spec → Code → Validation
+    """
+    from cerebro.llm import AutoBackend
+    from cerebro.agents.spec_writer_agent import AutonomousSpecWriter
+    from cerebro.agents.orchestrator_agent import OrchestratorAgent
+    from cerebro.utils.execution_validator import ExecutionValidator
+    import yaml
+    
+    print("=" * 80)
+    print("CEREBRO: AUTONOMOUS ANALYTICS GENERATION")
+    print("=" * 80)
+    print(f"\nData: {args.data_path}")
+    print(f"LLM: {args.llm}")
+    print(f"Output: {args.output}")
+    print()
+    
+    # Initialize LLM
+    print("Initializing LLM backend...")
+    llm = AutoBackend.create(args.llm)
+    print("LLM ready.\n")
+    
+    # Step 1: Generate Spec
+    print("=" * 80)
+    print("STEP 1: GENERATING ANALYTICAL SPECIFICATION")
+    print("=" * 80)
+    spec_writer = AutonomousSpecWriter(llm)
+    spec = spec_writer.generate_spec_from_data(args.data_path)
+    
+    if args.save_spec:
+        spec_path = args.output.replace('.py', '_spec.yaml')
+        with open(spec_path, 'w') as f:
+            yaml.dump(spec.model_dump(), f, default_flow_style=False)
+        print(f"\n✓ Spec saved to: {spec_path}")
+    
+    # Step 2: Generate Code
+    print("\n" + "=" * 80)
+    print("STEP 2: GENERATING PRODUCTION CODE")
+    print("=" * 80)
+    orchestrator = OrchestratorAgent(llm, use_rag=True)
+    code = orchestrator.generate_complete_pipeline(
+        spec,
+        output_path=args.output,
+        data_path=args.data_path
+    )
+    
+    # Step 3: Validate with Execution Feedback
+    if args.validate:
+        print("\n" + "=" * 80)
+        print("STEP 3: EXECUTION VALIDATION")
+        print("=" * 80)
+        validator = ExecutionValidator(max_retries=3)
+        code, success = validator.validate_and_fix(
+            code,
+            args.data_path,
+            orchestrator.agents['modeling'],  # Use modeling agent for fixes
+            context="Complete MMM pipeline"
+        )
+        
+        if success:
+            print("\n✓ Code validated successfully!")
+        else:
+            print("\n⚠ Code has errors but max retries reached.")
+            print("  Saving code for manual review.")
+    
+    # Save final code
+    with open(args.output, 'w') as f:
+        f.write(code)
+    
+    print("\n" + "=" * 80)
+    print("GENERATION COMPLETE")
+    print("=" * 80)
+    print(f"\n✓ Generated code: {args.output}")
+    print(f"  Lines: {len(code.splitlines())}")
+    print(f"\nNext steps:")
+    print(f"  1. Review the code: cat {args.output}")
+    print(f"  2. Run it: python {args.output}")
+    print()
+
+
+def cmd_generate(args):
+    """
+    Generate code from existing spec
+    """
+    from cerebro.llm import AutoBackend
+    from cerebro.agents.orchestrator_agent import OrchestratorAgent
+    from cerebro.spec.schema import MMMSpec
+    from cerebro.utils.execution_validator import ExecutionValidator
+    import yaml
+    
+    print("=" * 80)
+    print("CEREBRO: GENERATE FROM SPEC")
+    print("=" * 80)
+    print(f"\nSpec: {args.spec_path}")
+    print(f"Output: {args.output}")
+    print()
+    
+    # Load spec
+    with open(args.spec_path) as f:
+        spec_dict = yaml.safe_load(f)
+    spec = MMMSpec(**spec_dict)
+    
+    # Initialize LLM
+    print("Initializing LLM backend...")
+    llm = AutoBackend.create(args.llm)
+    print("LLM ready.\n")
+    
+    # Generate code
+    print("=" * 80)
+    print("GENERATING CODE FROM SPEC")
+    print("=" * 80)
+    orchestrator = OrchestratorAgent(llm, use_rag=True)
+    code = orchestrator.generate_complete_pipeline(
+        spec,
+        output_path=args.output,
+        data_path=args.data_path if args.data_path else None
+    )
+    
+    # Validate if requested and data available
+    if args.validate and args.data_path:
+        print("\n" + "=" * 80)
+        print("EXECUTION VALIDATION")
+        print("=" * 80)
+        validator = ExecutionValidator(max_retries=3)
+        code, success = validator.validate_and_fix(
+            code,
+            args.data_path,
+            orchestrator.agents['modeling'],
+            context=f"MMM pipeline for {spec.name}"
+        )
+        
+        if success:
+            print("\n✓ Code validated successfully!")
+        else:
+            print("\n⚠ Code has errors but max retries reached.")
+    
+    # Save
+    with open(args.output, 'w') as f:
+        f.write(code)
+    
+    print("\n" + "=" * 80)
+    print("GENERATION COMPLETE")
+    print("=" * 80)
+    print(f"\n✓ Generated: {args.output}")
+    print(f"  Lines: {len(code.splitlines())}")
+    print()
+
+
+def cmd_validate(args):
+    """
+    Validate existing generated code
+    """
+    from cerebro.llm import AutoBackend
+    from cerebro.agents.modeling_agent import ModelingAgent
+    from cerebro.utils.execution_validator import ExecutionValidator
+    
+    print("=" * 80)
+    print("CEREBRO: CODE VALIDATION")
+    print("=" * 80)
+    print(f"\nCode: {args.code_path}")
+    print(f"Data: {args.data_path}")
+    print()
+    
+    # Load code
+    with open(args.code_path) as f:
+        code = f.read()
+    
+    # Initialize LLM for fixes
+    llm = AutoBackend.create(args.llm)
+    agent = ModelingAgent(llm, use_rag=True)
+    
+    # Validate
+    validator = ExecutionValidator(max_retries=3)
+    fixed_code, success = validator.validate_and_fix(
+        code,
+        args.data_path,
+        agent,
+        context="MMM pipeline validation"
+    )
+    
+    # Save if fixed
+    if args.output:
+        with open(args.output, 'w') as f:
+            f.write(fixed_code)
+        print(f"\n✓ Fixed code saved to: {args.output}")
+    
+    print("\n" + "=" * 80)
+    print("VALIDATION COMPLETE")
+    print("=" * 80)
+    print(f"\nStatus: {'✓ SUCCESS' if success else '✗ FAILED'}")
+    print()
+
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Cerebro: Autonomous Marketing Mix Modeling Agent"
+        description="Cerebro: Autonomous Product and Marketing Data Science",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Autonomous analytics from data
+  cerebro auto data.csv --output pipeline.py --validate
+  
+  # Generate from existing spec
+  cerebro generate spec.yaml --output pipeline.py --data data.csv
+  
+  # Validate existing code
+  cerebro validate generated.py --data data.csv
+"""
     )
-    parser.add_argument(
-        "data_path",
-        help="Path to CSV file with MMM data"
+    
+    subparsers = parser.add_subparsers(dest='command', help='Command to run')
+    
+    # Auto command
+    auto_parser = subparsers.add_parser(
+        'auto',
+        help='Autonomous analytics generation from data'
     )
-    parser.add_argument(
-        "--model",
-        default="qwen2.5-coder:32b",
-        help="Ollama model to use (default: qwen2.5-coder:32b)"
+    auto_parser.add_argument(
+        'data_path',
+        help='Path to CSV data file'
     )
-    parser.add_argument(
-        "--timeout",
-        type=int,
-        default=600,
-        help="Timeout for LLM generation in seconds (default: 600)"
+    auto_parser.add_argument(
+        '--output', '-o',
+        default='generated_mmm_pipeline.py',
+        help='Output path for generated code (default: generated_mmm_pipeline.py)'
+    )
+    auto_parser.add_argument(
+        '--llm',
+        default='ollama:qwen2.5:7b',
+        help='LLM backend (default: ollama:qwen2.5:7b)'
+    )
+    auto_parser.add_argument(
+        '--save-spec',
+        action='store_true',
+        help='Save generated spec to YAML'
+    )
+    auto_parser.add_argument(
+        '--validate',
+        action='store_true',
+        help='Validate generated code with execution feedback'
+    )
+    
+    # Generate command
+    gen_parser = subparsers.add_parser(
+        'generate',
+        help='Generate code from existing spec'
+    )
+    gen_parser.add_argument(
+        'spec_path',
+        help='Path to YAML spec file'
+    )
+    gen_parser.add_argument(
+        '--output', '-o',
+        default='generated_mmm_pipeline.py',
+        help='Output path for generated code'
+    )
+    gen_parser.add_argument(
+        '--data-path',
+        help='Path to data (optional, needed for validation)'
+    )
+    gen_parser.add_argument(
+        '--llm',
+        default='ollama:qwen2.5:7b',
+        help='LLM backend'
+    )
+    gen_parser.add_argument(
+        '--validate',
+        action='store_true',
+        help='Validate generated code (requires --data-path)'
+    )
+    
+    # Validate command
+    val_parser = subparsers.add_parser(
+        'validate',
+        help='Validate existing generated code'
+    )
+    val_parser.add_argument(
+        'code_path',
+        help='Path to Python code to validate'
+    )
+    val_parser.add_argument(
+        'data_path',
+        help='Path to CSV data file for testing'
+    )
+    val_parser.add_argument(
+        '--output', '-o',
+        help='Output path for fixed code (optional)'
+    )
+    val_parser.add_argument(
+        '--llm',
+        default='ollama:qwen2.5:7b',
+        help='LLM backend for fixes'
     )
     
     args = parser.parse_args()
     
-    # Import here to avoid slow imports on --help
-    from cerebro.llm.qwen_rag_backend import QwenRAGBackend
-    import pandas as pd
-    import time
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
     
-    print("=" * 80)
-    print("CEREBRO - AUTONOMOUS MMM AGENT")
-    print("=" * 80)
-    print(f"\n📂 Data: {args.data_path}")
-    print(f"🤖 Model: {args.model}")
-    print()
-    
-    # Initialize agent (RAG loads instantly from disk!)
-    print("⏳ Loading agent...")
-    start = time.time()
-    llm = QwenRAGBackend(model=args.model, timeout=args.timeout)
-    print(f"✅ Agent ready in {time.time() - start:.1f}s\n")
-    
-    # Load data
-    print(f"📊 Loading data...")
-    data = pd.read_csv(args.data_path)
-    print(f"   Shape: {data.shape}")
-    print(f"   Columns: {list(data.columns[:5])}{'...' if len(data.columns) > 5 else ''}\n")
-    
-    # Build prompt
-    prompt = f"""
-You are exploring a marketing dataset with {len(data)} rows and {len(data.columns)} columns.
+    # Route to command
+    if args.command == 'auto':
+        cmd_auto(args)
+    elif args.command == 'generate':
+        cmd_generate(args)
+    elif args.command == 'validate':
+        cmd_validate(args)
 
-TASK: Explore this data autonomously and build a production-grade MMM model.
-
-1. Identify target, media channels, controls, and date column
-2. Analyze autocorrelation and decide on adstock transformations
-3. Check multicollinearity and choose modeling approach
-4. Build the model (Bayesian if appropriate, otherwise frequentist with positive constraints)
-5. Calculate ROI for each channel
-6. Print model summary and ROI
-
-Generate complete Python code. The data is already loaded as `data` DataFrame.
-"""
-    
-    print("🔄 Agent is exploring and generating code...\n")
-    print("-" * 80)
-    
-    # Generate code
-    code = llm.generate(prompt, use_rag=True)
-    
-    print("-" * 80)
-    print(f"\n✅ Code generated!\n")
-    
-    # Execute code
-    print("="*80)
-    print("EXECUTING GENERATED CODE")
-    print("="*80)
-    print()
-    
-    namespace = {'data': data}
-    try:
-        exec(code, namespace)
-        print("\n✅ Model built successfully!")
-    except Exception as e:
-        print(f"\n❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
-        
-        # Save code for debugging
-        debug_file = Path("/tmp/cerebro_debug.py")
-        with open(debug_file, 'w') as f:
-            f.write(code)
-        print(f"\n💾 Code saved to: {debug_file}")
-    
-    print("\n" + "="*80)
 
 if __name__ == "__main__":
     main()
-

@@ -55,19 +55,21 @@ def quickstart_example():
     print("  1. Profile your data (columns, types, distributions)")
     print("  2. Generate a structured MMM spec (YAML)")
     print("  3. Generate production Python code (~1000+ lines)")
-    print("  4. Save outputs to ./generated/")
+    print("  4. Validate code with execution feedback (auto-fix bugs)")
+    print("  5. Save validated outputs to ./generated/")
     print()
-    print("⏱️  This may take 2-5 minutes with local LLM...")
+    print("⏱️  This may take 3-7 minutes with local LLM + validation...")
     print("=" * 80)
     print()
     
     # Run Cerebro autonomous pipeline
     sys.argv = [
-        'cerebro',
+        'cerebro.cli',
         'auto',
         data_path,
         '--output', './generated/mmm_pipeline.py',
-        '--save-spec'
+        '--save-spec',
+        '--validate'  # Enable self-correction
     ]
     
     cerebro_main()
