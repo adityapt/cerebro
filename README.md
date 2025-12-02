@@ -1,4 +1,4 @@
-# 🧠 Cerebro: AutonomosProduct and Marketing DS
+# 🧠 Cerebro: Autonomous Product and Marketing DS
 
 **Cerebro** is an autonomous, multi-agent system that generates production-grade data science code for product and marketing analytics—no templates, no hardcoding, just intelligent code generation.
 
