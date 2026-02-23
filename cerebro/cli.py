@@ -30,9 +30,7 @@ def cmd_auto(args):
     from cerebro.agents.execution_validator import ExecutionValidator
     import yaml
     
-    print("=" * 80)
     print("CEREBRO: AUTONOMOUS ANALYTICS GENERATION")
-    print("=" * 80)
     print(f"\nData: {args.data_path}")
     print(f"LLM: {args.llm}")
     print(f"Output: {args.output}")
@@ -44,9 +42,7 @@ def cmd_auto(args):
     print("LLM ready.\n")
     
     # Step 1: Generate Spec
-    print("=" * 80)
     print("STEP 1: GENERATING ANALYTICAL SPECIFICATION")
-    print("=" * 80)
     spec_writer = AutonomousSpecWriter(llm)
     spec = spec_writer.generate_spec_from_data(args.data_path)
     
@@ -57,9 +53,7 @@ def cmd_auto(args):
         print(f"\n✓ Spec saved to: {spec_path}")
     
     # Step 2: Generate Code
-    print("\n" + "=" * 80)
     print("STEP 2: GENERATING PRODUCTION CODE")
-    print("=" * 80)
     orchestrator = OrchestratorAgent(llm, use_rag=True)
     code = orchestrator.generate_complete_pipeline(
         spec,
@@ -69,9 +63,7 @@ def cmd_auto(args):
     
     # Step 3: Validate with Execution Feedback
     if args.validate:
-        print("\n" + "=" * 80)
         print("STEP 3: EXECUTION VALIDATION")
-        print("=" * 80)
         validator = ExecutionValidator(max_retries=3)
         code, success = validator.validate_and_fix(
             code,
@@ -90,9 +82,7 @@ def cmd_auto(args):
     with open(args.output, 'w') as f:
         f.write(code)
     
-    print("\n" + "=" * 80)
     print("GENERATION COMPLETE")
-    print("=" * 80)
     print(f"\n✓ Generated code: {args.output}")
     print(f"  Lines: {len(code.splitlines())}")
     print(f"\nNext steps:")
@@ -111,9 +101,7 @@ def cmd_generate(args):
     from cerebro.agents.execution_validator import ExecutionValidator
     import yaml
     
-    print("=" * 80)
     print("CEREBRO: GENERATE FROM SPEC")
-    print("=" * 80)
     print(f"\nSpec: {args.spec_path}")
     print(f"Output: {args.output}")
     print()
@@ -129,9 +117,7 @@ def cmd_generate(args):
     print("LLM ready.\n")
     
     # Generate code
-    print("=" * 80)
     print("GENERATING CODE FROM SPEC")
-    print("=" * 80)
     orchestrator = OrchestratorAgent(llm, use_rag=True)
     code = orchestrator.generate_complete_pipeline(
         spec,
@@ -141,9 +127,7 @@ def cmd_generate(args):
     
     # Validate if requested and data available
     if args.validate and args.data_path:
-        print("\n" + "=" * 80)
         print("EXECUTION VALIDATION")
-        print("=" * 80)
         validator = ExecutionValidator(max_retries=3)
         code, success = validator.validate_and_fix(
             code,
@@ -161,9 +145,7 @@ def cmd_generate(args):
     with open(args.output, 'w') as f:
         f.write(code)
     
-    print("\n" + "=" * 80)
     print("GENERATION COMPLETE")
-    print("=" * 80)
     print(f"\n✓ Generated: {args.output}")
     print(f"  Lines: {len(code.splitlines())}")
     print()
@@ -177,9 +159,7 @@ def cmd_validate(args):
     from cerebro.agents.modeling_agent import ModelingAgent
     from cerebro.agents.execution_validator import ExecutionValidator
     
-    print("=" * 80)
     print("CEREBRO: CODE VALIDATION")
-    print("=" * 80)
     print(f"\nCode: {args.code_path}")
     print(f"Data: {args.data_path}")
     print()
@@ -207,9 +187,7 @@ def cmd_validate(args):
             f.write(fixed_code)
         print(f"\n✓ Fixed code saved to: {args.output}")
     
-    print("\n" + "=" * 80)
     print("VALIDATION COMPLETE")
-    print("=" * 80)
     print(f"\nStatus: {'✓ SUCCESS' if success else '✗ FAILED'}")
     print()
 

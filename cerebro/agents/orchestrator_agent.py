@@ -187,9 +187,7 @@ JSON only. THINK: Modular mode allows validation + execution per module.
         logger.info(f"Execute: {execute}")
         
         # STEP 1: GOT REASONING
-        print("\n" + "=" * 80)
         print("STEP 1: GOT REASONING - Analyzing Pipeline Strategy")
-        print("=" * 80)
         
         reasoning = self._reason_about_task(spec, {'data_path': data_path})
         
@@ -226,9 +224,7 @@ JSON only. THINK: Modular mode allows validation + execution per module.
         Uses PipelineContext for standardized agent communication.
         start_from: if "diagnostics", skip exploration/preprocessing/modeling and run from diagnostics onward (requires module_3_results.json and data_path to preprocessed CSV).
         """
-        print("\n" + "=" * 80)
         print("STEP 2: MODULAR PIPELINE - Generate + Validate + Execute Each Module")
-        print("=" * 80)
         if start_from:
             print(f"  [NOTE] start_from={start_from}: skipping earlier modules.")
         if not execute:
@@ -270,9 +266,7 @@ JSON only. THINK: Modular mode allows validation + execution per module.
         
         # MODULE 1: EXPLORATION (skip if start_from == "diagnostics")
         if start_from != "diagnostics":
-            print("\n" + "=" * 80)
             print("MODULE 1: DATA EXPLORATION - GENERATE & VALIDATE & EXECUTE")
-            print("=" * 80)
             
             context.start_agent('exploration')
             
@@ -296,9 +290,7 @@ JSON only. THINK: Modular mode allows validation + execution per module.
         
         # MODULE 2: PREPROCESSING (skip if start_from == "diagnostics")
         if start_from != "diagnostics":
-            print("\n" + "=" * 80)
             print("MODULE 2: PREPROCESSING - GENERATE & VALIDATE & EXECUTE")
-            print("=" * 80)
             
             context.start_agent('preprocessing')
             
@@ -340,9 +332,7 @@ JSON only. THINK: Modular mode allows validation + execution per module.
                 context.mark_agent_failed('preprocessing', "Execution returned None")
             
             # MODULE 3: MODELING (must receive preprocessed data path from context.data_path)
-            print("\n" + "=" * 80)
             print("MODULE 3: MODELING - GENERATE & VALIDATE & EXECUTE")
-            print("=" * 80)
             modeling_data_path = context.data_path
             logger.info(f" Modeling input data: {modeling_data_path}")
             print(f"  Modeling input data: {modeling_data_path}")
@@ -418,9 +408,7 @@ JSON only. THINK: Modular mode allows validation + execution per module.
         
         # MODULE 4: DIAGNOSTICS
         if context.manifest_path:
-            print("\n" + "=" * 80)
             print("MODULE 4: DIAGNOSTICS - GENERATE & VALIDATE & EXECUTE")
-            print("=" * 80)
             
             context.start_agent('diagnostics')
             
@@ -460,9 +448,7 @@ JSON only. THINK: Modular mode allows validation + execution per module.
         
         # MODULE 5: OPTIMIZATION
         if context.manifest_path:
-            print("\n" + "=" * 80)
             print("MODULE 5: OPTIMIZATION - GENERATE & VALIDATE & EXECUTE")
-            print("=" * 80)
             
             context.start_agent('optimization')
             
@@ -490,9 +476,7 @@ JSON only. THINK: Modular mode allows validation + execution per module.
         
         # MODULE 6: VISUALIZATION
         if context.manifest_path:
-            print("\n" + "=" * 80)
             print("MODULE 6: VISUALIZATION - GENERATE & VALIDATE & EXECUTE")
-            print("=" * 80)
             
             context.start_agent('visualization')
             
@@ -519,9 +503,7 @@ JSON only. THINK: Modular mode allows validation + execution per module.
             context.skipped_agents.append('visualization')
         
         # FINAL SUMMARY
-        print("\n" + "=" * 80)
         print(" PIPELINE COMPLETE!")
-        print("=" * 80)
         
         # Mark pipeline as complete
         context.next_agent = None
@@ -666,9 +648,7 @@ JSON only. THINK: Modular mode allows validation + execution per module.
         """
         Run pipeline in monolithic mode: Generate all modules, assemble into one file.
         """
-        print("\n" + "=" * 80)
         print("STEP 2: MONOLITHIC PIPELINE - Generate All Modules")
-        print("=" * 80)
         
         # Generate header
         header = self._generate_header(spec)
@@ -739,13 +719,10 @@ sns.set_style("whitegrid")
 plt.rcParams['figure.figsize'] = (12, 6)
 jax.config.update('jax_platform_name', 'cpu')
 
-print("=" * 80)
 print(" MMM PIPELINE")
-print("=" * 80)
 print(f"Model: {spec.name}")
 print(f"Channels: {len(spec.channels)}")
 print(f"Backend: {spec.inference.backend}")
-print("=" * 80)
 
 '''
     
@@ -791,9 +768,7 @@ if __name__ == "__main__":
     # Step 6: Visualization
     viz_result = run_visualization(model_results_path)
     
-    print("\\n" + "=" * 80)
     print(" COMPLETE MMM PIPELINE EXECUTED SUCCESSFULLY!")
-    print("=" * 80)
 '''
     
     def _assemble_code(self, header: str, modules: dict, main: str) -> str:

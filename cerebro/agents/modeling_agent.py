@@ -842,7 +842,6 @@ coefs_over_time = jnp.concatenate([coef_0[:, None], coef_0[:, None] + jnp.cumsum
 # Two-step: (1) transformed_channel = jax.vmap(transform_channel)(channel_data, decays, alphas, jnp.ones(n_channels))  # shape (n_channels, n_obs)
 #           (2) contributions = jnp.sum(coefs_over_time * transformed_channel, axis=0)  # (n_obs,)
 """)
-        parts.append("\n" + "=" * 80 + "\n")
         return "".join(parts)
 
     def _generate_mcmc_code_simple(self, spec: MMMSpec, spec_yaml: str, reasoning: dict = None) -> str:

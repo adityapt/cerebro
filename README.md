@@ -1,4 +1,4 @@
-# 🧠 Cerebro: Autonomous Product and Marketing DS
+# Cerebro: Autonomous Product and Marketing DS
 
 **Cerebro** is an autonomous, multi-agent system that generates production-grade data science code for product and marketing analytics—no templates, no hardcoding, just intelligent code generation.
 
@@ -9,7 +9,7 @@
 
 **Cerebro** is a fully agentic Marketing Mix Modeling (MMM) system that autonomously generates, validates, and executes high-quality Bayesian models. Built with AI agents that reason, self-heal, and adapt.
 
-## 🎯 What Makes Cerebro Different
+## What Makes Cerebro Different
 
 - **Fully Agentic**: No hardcoded templates - AI generates all code from data
 - **Self-Validating**: Multi-layer validation with automatic error fixing (15 retries)
@@ -18,7 +18,7 @@
 - **Backend-Aware**: Adapts to NumPyro MCMC, SVI, or JAX optimization
 - **Zero Hardcoding**: All configuration from spec, all code from AI
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Installation
 
@@ -79,7 +79,7 @@ The system will:
 
 **Total Time**: ~30-45 minutes (mostly MCMC sampling)
 
-## 📊 Features
+## Features
 
 ### Agentic System
 - **SpecWriterAgent**: Analyzes data, generates MMM specifications
@@ -101,7 +101,7 @@ The system will:
 - **RAG Integration**: 4,224+ MMM examples
 - **Comprehensive Docs**: All context in CEREBRO_COMPLETE_DOCUMENTATION.md
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 User Data (CSV)
@@ -126,13 +126,13 @@ Pipeline Agents (6 modules)
 Results (PKL, plots, reports)
 ```
 
-## 📖 Documentation
+## Documentation
 
 - **[CEREBRO_COMPLETE_DOCUMENTATION.md](CEREBRO_COMPLETE_DOCUMENTATION.md)** - Complete system documentation (24 KB, 806 lines)
 - **[SECURITY.md](SECURITY.md)** - Credential management guide
 - **[USAGE.md](USAGE.md)** - Quick reference guide
 
-## 🔧 Configuration
+## Configuration
 
 ### Data Requirements
 
@@ -175,7 +175,7 @@ inference:
   num_chains: 1
 ```
 
-## 🎓 Example Queries
+## Example Queries
 
 ### Check Model Results
 ```python
@@ -206,7 +206,7 @@ inference:
   learning_rate: 0.01
 ```
 
-## 🔬 Advanced Usage
+## Advanced Usage
 
 ### Custom Credential Method
 
@@ -263,7 +263,7 @@ channels:
         type: hill       # or: logistic, exponential
 ```
 
-## 📈 Performance
+## Performance
 
 **Validation Speed:**
 - Static validation: <1 second
@@ -280,7 +280,7 @@ channels:
 - Total pipeline: ~30-45 minutes end-to-end
 - Self-healing success: >90% within 15 retries
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Test core imports
@@ -295,7 +295,7 @@ print('All imports successful!')
 python3 run_pipeline.py --data-path "examples/MMM Data.csv"
 ```
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Slow MCMC (1023 leapfrog steps)
 
@@ -343,7 +343,7 @@ export OPENAI_API_KEY="sk-..."
 python3 run_pipeline.py --api-key "sk-..."
 ```
 
-## 📦 Project Structure
+## Project Structure
 
 ```
 cerebro/
@@ -370,7 +370,7 @@ cerebro/
 └── examples/                              ← Example scripts
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Contributions welcome! Please:
 
@@ -380,11 +380,11 @@ Contributions welcome! Please:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📜 License
+## License
 
 MIT License - see LICENSE file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **NumPyro**: Bayesian inference framework
 - **JAX**: Accelerated computing
@@ -392,7 +392,7 @@ MIT License - see LICENSE file for details.
 - **PyMC-Marketing**: MMM best practices
 - **OpenAI**: GPT-4o for agentic reasoning
 
-## 📞 Support
+## Support
 
 - **Documentation**: See [CEREBRO_COMPLETE_DOCUMENTATION.md](CEREBRO_COMPLETE_DOCUMENTATION.md)
 - **Issues**: [GitHub Issues](https://github.com/yourusername/cerebro/issues)
@@ -400,5 +400,5 @@ MIT License - see LICENSE file for details.
 
 ---
 
-**Built with AI for MMM practitioners** 🧠
+**Built with AI for MMM practitioners**
 

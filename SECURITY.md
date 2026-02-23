@@ -37,7 +37,7 @@ This project uses a secure credential management system to ensure API keys and s
 ✅ **No Hardcoded Credentials:**
 - All source code reads credentials at runtime
 - No API keys in `cerebro/llm/api_backend.py` or any other code
-- No company-specific endpoints hardcoded
+- No API endpoints hardcoded; read from config
 
 ✅ **Example Files (Safe to Commit):**
 - `.api_config.yaml.example` - Template without real credentials
@@ -71,9 +71,6 @@ The pipeline supports 3 methods (in priority order):
 Run this before committing:
 
 ```bash
-# Check for any Zillow/company-specific references
-git grep -i "zillow\|zgai\|internal" 
-
 # Check for hardcoded API keys
 git grep -E "eyJhbG|sk-[A-Za-z0-9]{32,}|api.*key.*=.*['\"]"
 

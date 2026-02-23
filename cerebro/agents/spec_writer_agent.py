@@ -486,9 +486,7 @@ if __name__ == "__main__":
     # Save
     agent.save_spec(spec, "/tmp/autonomous_mmm_spec.yaml")
     
-    print("\n" + "=" * 80)
     print("SUCCESS!")
-    print("=" * 80)
     print(f"Spec saved to: /tmp/autonomous_mmm_spec.yaml")
     print(f"\nTo generate code:")
     print(f"  cerebro generate /tmp/autonomous_mmm_spec.yaml")
