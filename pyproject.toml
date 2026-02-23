@@ -87,10 +87,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/cerebro"
-Documentation = "https://cerebro-ds.readthedocs.io"
-Repository = "https://github.com/yourusername/cerebro"
-"Bug Tracker" = "https://github.com/yourusername/cerebro/issues"
+Homepage = "https://github.com/adityapt/cerebro"
+#Documentation = "https://cerebro-ds.readthedocs.io"
+Repository = "https://github.com/adityapt/cerebro"
+"Bug Tracker" = "https://github.com/adityapt/cerebro/issues"
 
 [tool.setuptools]
 packages = ["cerebro"]
