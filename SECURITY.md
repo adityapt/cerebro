@@ -1,131 +1,46 @@
-# Security Guidelines
+# Security: Credentials and Secrets
 
-## Credential Management
+## Credential sources (priority order)
 
-This project uses a secure credential management system to ensure API keys and sensitive information are never committed to git.
+1. **Command line** – `run_pipeline.py --api-key "sk-..." --base-url "https://..."`
+2. **Environment** – `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`
+3. **Config file** – `.api_config.yaml` (see below)
 
-### Quick Start
-
-1. **Copy the example config:**
-   ```bash
-   cp .api_config.yaml.example .api_config.yaml
-   ```
-
-2. **Add your credentials:**
-   Edit `.api_config.yaml` with your actual API key:
-   ```yaml
-   api:
-     provider: "openai"
-     base_url: "https://api.openai.com/v1"
-     api_key: "sk-your-actual-key-here"
-     model: "gpt-4o"
-   ```
-
-3. **Verify it's gitignored:**
-   ```bash
-   git check-ignore .api_config.yaml
-   # Should output: .api_config.yaml
-   ```
-
-### What's Protected
-
-✅ **Gitignored Files:**
-- `.api_config.yaml` - Your actual API credentials (NEVER committed)
-- `*.log` - Log files that might contain API responses
-- `*.pkl` - Model results files
-
-✅ **No Hardcoded Credentials:**
-- All source code reads credentials at runtime
-- No API keys in `cerebro/llm/api_backend.py` or any other code
-- No API endpoints hardcoded; read from config
-
-✅ **Example Files (Safe to Commit):**
-- `.api_config.yaml.example` - Template without real credentials
-- `USAGE.md` - Documentation with examples only
-- `SECURITY.md` - This file
-
-### Alternative Credential Methods
-
-The pipeline supports 3 methods (in priority order):
-
-1. **Command-line arguments** (highest priority)
-   ```bash
-   python3 run_pipeline.py --api-key "sk-..." --base-url "https://api.openai.com/v1"
-   ```
-
-2. **Environment variables**
-   ```bash
-   export OPENAI_API_KEY="sk-..."
-   export OPENAI_BASE_URL="https://api.openai.com/v1"
-   python3 run_pipeline.py
-   ```
-
-3. **Config file** (lowest priority)
-   ```bash
-   # Uses .api_config.yaml by default
-   python3 run_pipeline.py
-   ```
-
-### Security Verification
-
-Run this before committing:
+## Config file
 
 ```bash
-# Check for hardcoded API keys
-git grep -E "eyJhbG|sk-[A-Za-z0-9]{32,}|api.*key.*=.*['\"]"
-
-# Verify .api_config.yaml is gitignored
-git check-ignore .api_config.yaml
-
-# Verify no credentials are tracked
-git ls-files | xargs grep -l "api.*key.*=" || echo "All clear!"
+cp .api_config.yaml.example .api_config.yaml
+# Edit .api_config.yaml with your API key; do not commit this file.
 ```
 
-### What Gets Committed
+Confirm it is ignored:
 
-✅ **Safe to commit:**
-- Source code (`cerebro/`)
-- Example configs (`.example` files)
-- Documentation (`README.md`, `USAGE.md`, `SECURITY.md`)
-- Example data (`examples/`)
+```bash
+git check-ignore .api_config.yaml
+# Should output: .api_config.yaml
+```
 
-❌ **Never commit:**
-- `.api_config.yaml` (your real credentials)
-- Log files with API responses
-- Model output files with proprietary data
-- Any files with actual API keys or tokens
+## What is gitignored
 
-### File Permissions
+- `.api_config.yaml` – your real API credentials
+- `*.log` – log files
+- `*.pkl` – model outputs
+- Generated files: `module_*.py`, `module_*.pkl`, `spec_auto*.yaml`, `module_3_results.json`, etc. (see `.gitignore`)
 
-Set restrictive permissions on your config file:
+## Safe to commit
+
+- Source code under `cerebro/`
+- `.api_config.yaml.example` (no real keys)
+- `README.md`, `SECURITY.md`, `LICENSE`
+
+## If you commit credentials
+
+1. Rotate or revoke the key immediately.
+2. Remove from history (e.g. `git filter-repo` or BFG) and force-push if necessary.
+3. Create new credentials.
+
+## File permissions
 
 ```bash
 chmod 600 .api_config.yaml
-# Only you can read/write
 ```
-
-### If Credentials Are Accidentally Committed
-
-If you accidentally commit credentials:
-
-1. **Immediately rotate/revoke the API key**
-2. **Remove from git history:**
-   ```bash
-   # Use git-filter-repo or BFG Repo-Cleaner
-   git filter-repo --invert-paths --path .api_config.yaml
-   ```
-3. **Force push (if needed):**
-   ```bash
-   git push origin --force --all
-   ```
-4. **Generate new credentials**
-
-### Contact
-
-For security concerns, please contact the repository maintainer.
-
----
-
-**Last Updated:** December 15, 2025
-**Status:** ✅ All credentials secure, no hardcoded secrets in git
-
