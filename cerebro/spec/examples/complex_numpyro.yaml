@@ -68,6 +68,11 @@ hierarchy:
   levels: ["US", "CA", "EU"]
   pooling: "hierarchical"
 
+# Advanced (TVPs + Cholesky/LKJ) is ON by default. To disable, add:
+# advanced:
+#   time_varying_parameters: false
+#   correlated_channel_priors: false
+
 priors:
   baseline: "normal(log(1000), 0.5)"
   channel_effects: "half_normal(0.5)"

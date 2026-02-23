@@ -27,7 +27,7 @@ def cmd_auto(args):
     from cerebro.llm import AutoBackend
     from cerebro.agents.spec_writer_agent import AutonomousSpecWriter
     from cerebro.agents.orchestrator_agent import OrchestratorAgent
-    from cerebro.utils.execution_validator import ExecutionValidator
+    from cerebro.agents.execution_validator import ExecutionValidator
     import yaml
     
     print("=" * 80)
@@ -108,7 +108,7 @@ def cmd_generate(args):
     from cerebro.llm import AutoBackend
     from cerebro.agents.orchestrator_agent import OrchestratorAgent
     from cerebro.spec.schema import MMMSpec
-    from cerebro.utils.execution_validator import ExecutionValidator
+    from cerebro.agents.execution_validator import ExecutionValidator
     import yaml
     
     print("=" * 80)
@@ -175,7 +175,7 @@ def cmd_validate(args):
     """
     from cerebro.llm import AutoBackend
     from cerebro.agents.modeling_agent import ModelingAgent
-    from cerebro.utils.execution_validator import ExecutionValidator
+    from cerebro.agents.execution_validator import ExecutionValidator
     
     print("=" * 80)
     print("CEREBRO: CODE VALIDATION")

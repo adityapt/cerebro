@@ -9,6 +9,11 @@ from cerebro.agents.diagnostics_agent import DiagnosticsAgent
 from cerebro.agents.optimization_agent import OptimizationAgent
 from cerebro.agents.visualization_agent import VisualizationAgent
 from cerebro.agents.orchestrator_agent import OrchestratorAgent
+from cerebro.agents.pipeline_context import (
+    PipelineContext,
+    AgentStatus,
+    AgentExecution
+)
 
 __all__ = [
     "BaseAgent",
@@ -20,4 +25,7 @@ __all__ = [
     "OptimizationAgent",
     "VisualizationAgent",
     "OrchestratorAgent",
+    "PipelineContext",
+    "AgentStatus",
+    "AgentExecution",
 ]

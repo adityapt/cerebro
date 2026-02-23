@@ -1,0 +1,20 @@
+# API Configuration Template
+# Copy this file to .api_config.yaml and add your actual credentials
+# NOTE: .api_config.yaml is gitignored and will never be committed
+
+api:
+  provider: "openai"  # or "custom" for OpenAI-compatible APIs
+  base_url: "https://api.openai.com/v1"  # OpenAI API endpoint
+  api_key: "your-api-key-here"  # Replace with your actual API key
+  model: "gpt-4o"  # Model to use
+  max_tokens: 4096  # Maximum tokens per request
+  temperature: 0.7  # Temperature for generation
+
+# Example for custom/internal API:
+# api:
+#   provider: "custom"
+#   base_url: "https://your-internal-api.com/v1"
+#   api_key: "your-internal-api-key"
+#   model: "gpt-4o"
+#   max_tokens: 4096
+

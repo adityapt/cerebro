@@ -1,4 +1,0 @@
-"""
-Cerebro test suite.
-"""
-

@@ -8,8 +8,7 @@ Specialized agentic system for:
 - Time Series Forecasting
 """
 
-from cerebro.core.orchestrator import Cerebro
+from cerebro.agents.orchestrator_agent import OrchestratorAgent
 
 __version__ = "0.1.0"
-__all__ = ["Cerebro"]
-
+__all__ = ["OrchestratorAgent", "__version__"]

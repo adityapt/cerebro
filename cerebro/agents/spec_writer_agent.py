@@ -35,7 +35,7 @@ class AutonomousSpecWriter:
             try:
                 from cerebro.llm.rag_backend import RAGBackend
                 self.rag = RAGBackend()
-                logger.info("✓ RAG system loaded (production MMM examples available)")
+                logger.info("[OK] RAG system loaded (production MMM examples available)")
             except Exception as e:
                 logger.warning(f"Could not load RAG: {e}")
                 self.rag = None
@@ -58,18 +58,16 @@ class AutonomousSpecWriter:
         Returns:
             MMMSpec object
         """
-        logger.info("=" * 80)
         logger.info("AUTONOMOUS SPEC GENERATION")
-        logger.info("=" * 80)
         
         # Step 1: Load and profile data
         logger.info("Step 1: Loading and profiling data...")
         data = pd.read_csv(data_path)
         profile = self._profile_data(data)
         
-        logger.info(f"  ✓ Loaded {len(data)} rows, {len(data.columns)} columns")
-        logger.info(f"  ✓ Detected {len(profile['media_channels'])} media channels")
-        logger.info(f"  ✓ Target: {profile['target_column']}")
+        logger.info(f"  [OK] Loaded {len(data)} rows, {len(data.columns)} columns")
+        logger.info(f"  [OK] Detected {len(profile['media_channels'])} media channels")
+        logger.info(f"  [OK] Target: {profile['target_column']}")
         
         # Step 2: Ask agent to generate spec
         logger.info("\nStep 2: Generating spec with LLM...")
@@ -85,53 +83,174 @@ class AutonomousSpecWriter:
         spec.data_insights['data_path'] = data_path
         spec.data_insights['n_observations'] = len(data)
         
-        logger.info("=" * 80)
-        logger.info("✅ SPEC GENERATION COMPLETE!")
-        logger.info("=" * 80)
+        logger.info("[OK] SPEC GENERATION COMPLETE!")
         logger.info(spec.summary())
         
         return spec
     
-    def _profile_data(self, data: pd.DataFrame) -> Dict[str, Any]:
-        """Profile the dataset to understand structure"""
-        profile = {}
+    def _classify_columns_semantic(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Use LLM to semantically classify columns instead of keyword matching"""
         
-        # Detect date column
+        # Build column statistics for LLM
+        col_stats = []
+        for col in data.columns:
+            stats = {
+                'name': col,
+                'dtype': str(data[col].dtype),
+                'nunique': int(data[col].nunique()),
+                'pct_unique': float(data[col].nunique() / len(data) * 100),
+                'sample_values': data[col].head(5).tolist(),
+                'has_nulls': bool(data[col].isnull().any())
+            }
+            if data[col].dtype in [np.float64, np.int64]:
+                stats['min'] = float(data[col].min())
+                stats['max'] = float(data[col].max())
+                stats['mean'] = float(data[col].mean())
+                stats['std'] = float(data[col].std())
+            col_stats.append(stats)
+        
+        # Prompt for LLM
+        prompt = f"""You are an expert data scientist analyzing MMM (Marketing Mix Model) data.
+
+TASK: Classify each column as one of: DATE, TARGET, MEDIA_CHANNEL, CONTROL, or ID.
+
+RULES:
+1. DATE: Time identifier (week, date, day, month, year)
+2. TARGET: The outcome variable (sales, visits, revenue, conversions)
+3. MEDIA_CHANNEL: Marketing spend/impressions (channel, ad, media, impression, spend, cost)
+4. CONTROL: External factors (seasonality, weather, price, macro indicators)
+5. ID: Identifiers that should NOT be used as features (dmacode, store_id, user_id, etc.)
+   - High cardinality (>10% unique values)
+   - Sequential patterns (500, 501, 502...)
+   - Names with "id", "code", "key"
+
+DATASET INFO:
+- Total rows: {len(data)}
+- Total columns: {len(data.columns)}
+
+COLUMNS:
+"""
+        for i, stats in enumerate(col_stats, 1):
+            prompt += f"\n{i}. {stats['name']}\n"
+            prompt += f"   dtype: {stats['dtype']}, unique: {stats['nunique']} ({stats['pct_unique']:.1f}%)\n"
+            prompt += f"   sample: {stats['sample_values']}\n"
+            if 'min' in stats:
+                prompt += f"   range: [{stats['min']:.2f}, {stats['max']:.2f}], mean: {stats['mean']:.2f}\n"
+        
+        prompt += """
+OUTPUT FORMAT (JSON):
+{
+  "date": "column_name or null",
+  "target": "column_name",
+  "media_channels": ["channel1", "channel2", ...],
+  "controls": ["control1", "control2", ...],
+  "ids_excluded": ["id1", "id2", ...]
+}
+
+IMPORTANT:
+- dmacode, store_id, user_id, etc. should go in "ids_excluded", NOT "controls"
+- Only put true exogenous variables in "controls"
+- Use exact column names as they appear
+
+JSON:"""
+        
+        # Get LLM response
+        response = ""
+        for chunk in self.llm.reason(prompt, stream=True):
+            response += chunk
+        
+        # Parse JSON
+        import json
+        # Extract JSON from response (might have markdown)
+        response = response.strip()
+        if "```json" in response:
+            response = response.split("```json")[1].split("```")[0].strip()
+        elif "```" in response:
+            response = response.split("```")[1].split("```")[0].strip()
+        
+        try:
+            classification = json.loads(response)
+            logger.info(f"[OK] Semantic column classification:")
+            logger.info(f"  Date: {classification['date']}")
+            logger.info(f"  Target: {classification['target']}")
+            logger.info(f"  Media channels: {len(classification['media_channels'])}")
+            logger.info(f"  Controls: {len(classification['controls'])}")
+            logger.info(f"  IDs excluded: {classification.get('ids_excluded', [])}")
+            return classification
+        except Exception as e:
+            logger.error(f"Failed to parse LLM response: {e}")
+            logger.error(f"Response: {response}")
+            # Fallback to simple heuristics
+            return self._fallback_classification(data)
+    
+    def _fallback_classification(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Fallback to simple heuristics if LLM fails"""
+        logger.warning("Using fallback heuristic classification")
+        
+        # Date
         date_col = None
         for col in data.columns:
-            if 'date' in col.lower() or 'week' in col.lower() or 'day' in col.lower():
+            if any(kw in col.lower() for kw in ['date', 'week', 'day', 'month', 'year', 'time']):
                 date_col = col
                 break
-        profile['date_column'] = date_col
         
-        # Detect target column
+        # Target
         target_col = None
         for col in data.columns:
-            if any(kw in col.lower() for kw in ['target', 'sales', 'revenue', 'visits', 'bookings']):
+            if any(kw in col.lower() for kw in ['target', 'sales', 'revenue', 'visits', 'bookings', 'conversions']):
                 target_col = col
                 break
         if not target_col:
-            # Use last numeric column
             numeric_cols = data.select_dtypes(include=[np.number]).columns
-            target_col = numeric_cols[-1]
-        profile['target_column'] = target_col
+            target_col = numeric_cols[-1] if len(numeric_cols) > 0 else data.columns[-1]
         
-        # Detect media channels (use EXACT column names)
+        # Media channels
         media_keywords = ['spend', 'impression', 'cost', 'channel', 'ad', 'media']
         media_channels = []
         for col in data.columns:
-            if col == target_col or col == date_col:
+            if col in [target_col, date_col]:
                 continue
             if any(kw in col.lower() for kw in media_keywords):
-                media_channels.append(str(col))  # Use exact name including all suffixes
-        profile['media_channels'] = media_channels
+                media_channels.append(str(col))
         
-        # Detect control variables
+        # Controls - EXCLUDE high cardinality IDs
+        id_keywords = ['id', 'code', 'key', 'index']
         controls = []
         for col in data.columns:
-            if col not in [target_col, date_col] + media_channels:
-                if data[col].dtype in [np.float64, np.int64]:
-                    controls.append(col)
+            if col in [target_col, date_col] + media_channels:
+                continue
+            # Skip if looks like ID
+            if any(kw in col.lower() for kw in id_keywords):
+                continue
+            # Skip if high cardinality (>10% unique)
+            if data[col].nunique() / len(data) > 0.10:
+                continue
+            if data[col].dtype in [np.float64, np.int64]:
+                controls.append(col)
+        
+        return {
+            'date': date_col,
+            'target': target_col,
+            'media_channels': media_channels,
+            'controls': controls,
+            'ids_excluded': []
+        }
+    
+    def _profile_data(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Profile the dataset to understand structure using semantic LLM-based classification"""
+        profile = {}
+        
+        # Use LLM to classify columns semantically
+        column_classification = self._classify_columns_semantic(data)
+        
+        date_col = column_classification['date']
+        target_col = column_classification['target']
+        media_channels = column_classification['media_channels']
+        controls = column_classification['controls']
+        
+        profile['date_column'] = date_col
+        profile['target_column'] = target_col
+        profile['media_channels'] = media_channels
         profile['controls'] = controls
         
         # Basic statistics
@@ -206,7 +325,7 @@ channels:
       spending_pattern: "your analysis of diminishing returns"
     transform:
       adstock:
-        type: "geometric"  # CHOOSE: geometric, weibull, delayed, carryover
+        type: "geometric"  # CHOOSE: geometric, delayed, carryover, exponential
         max_lag: 6  # Based on your analysis
         reasoning: "Why you chose this"
       saturation:
@@ -224,8 +343,11 @@ priors:
   sigma: "half_normal(100)"
 
 inference:
-  backend: "auto"  # CHOOSE based on data size: pymc (<5K rows), numpyro_nuts (5-10K), numpyro_svi (>10K)
-  reasoning: "Why you chose this backend"
+  backend: "numpyro_nuts"  # ALWAYS use numpyro_nuts (MCMC) for production - most robust and accurate
+  num_warmup: 500
+  num_samples: 500
+  num_chains: 1  # Use 1 chain for faster execution (sequential)
+  reasoning: "MCMC provides full posterior uncertainty quantification"
 
 evaluation:
   metrics: ["loo", "r2", "mape"]
@@ -234,10 +356,10 @@ evaluation:
 IMPORTANT GUIDELINES:
 1. For each channel, ANALYZE the data characteristics
 2. Choose adstock type based on:
-   - geometric: simple decay
-   - weibull: flexible decay shape (good default)
+   - geometric: simple decay (good default)
    - delayed: if effects peak after delay (e.g., TV)
    - carryover: momentum effects
+   - exponential: exponential decay
 3. Choose saturation based on spending pattern
 4. Explain your reasoning
 5. Output ONLY valid YAML, no markdown fences, no extra text
@@ -273,7 +395,7 @@ Generate the complete spec now:"""
             return ""
         
         queries = [
-            "weibull adstock transformation implementation",
+            "geometric adstock transformation implementation",
             "delayed adstock with peak effect after lag",
             "hill saturation curve for diminishing returns",
             "hierarchical bayesian MMM with regional effects",
@@ -293,9 +415,9 @@ Generate the complete spec now:"""
             return ""
         
         rag_section = """
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 PRODUCTION MMM CODE EXAMPLES (from RAG)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 
 These are real production MMM patterns from frameworks like PyMC-Marketing,
 LightweightMMM, Meridian, etc. Use these as inspiration for sophisticated
@@ -306,7 +428,7 @@ transformations:
             rag_section += f"\nExample {i}:\n```python\n{example[:500]}...\n```\n"
         
         rag_section += """
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 
 """
         return rag_section
@@ -324,7 +446,7 @@ transformations:
         try:
             spec_dict = yaml.safe_load(yaml_text)
             spec = MMMSpec(**spec_dict)
-            logger.info("✓ Spec validated successfully")
+            logger.info("[OK] Spec validated successfully")
             return spec
         except Exception as e:
             logger.error(f"Failed to parse/validate spec: {e}")
@@ -335,7 +457,7 @@ transformations:
     def save_spec(self, spec: MMMSpec, output_path: str):
         """Save spec to YAML file"""
         spec.to_yaml(output_path)
-        logger.info(f"✓ Spec saved to: {output_path}")
+        logger.info(f"[OK] Spec saved to: {output_path}")
 
 
 # CLI for testing
@@ -347,7 +469,7 @@ if __name__ == "__main__":
     data_path = "/Users/adityapu/Documents/GitHub/deepcausalmmm/examples/data/MMM Data.csv"
     
     if not Path(data_path).exists():
-        print(f"❌ Data not found: {data_path}")
+        print(f"[ERROR] Data not found: {data_path}")
         sys.exit(1)
     
     # Use Gemini (free) or MLX (local)

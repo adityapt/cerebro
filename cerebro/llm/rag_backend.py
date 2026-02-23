@@ -247,4 +247,22 @@ class RAGBackend:
             'dataset_path': str(self.dataset_path),
             'persist_directory': str(self.persist_directory)
         }
+    
+    def add_document(self, document: str, metadata: Dict[str, str], doc_id: str):
+        """Add a single document to the RAG collection"""
+        self.collection.add(
+            documents=[document],
+            metadatas=[metadata],
+            ids=[doc_id]
+        )
+        logger.info(f"Added document to RAG: {doc_id}")
+    
+    def add_documents(self, documents: list, metadatas: list, ids: list):
+        """Add multiple documents to the RAG collection"""
+        self.collection.add(
+            documents=documents,
+            metadatas=metadatas,
+            ids=ids
+        )
+        logger.info(f"Added {len(documents)} documents to RAG")
 

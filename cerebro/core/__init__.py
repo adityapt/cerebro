@@ -1,6 +1,3 @@
-"""Core Cerebro components"""
+"""Core Cerebro components (reserved for future use)"""
 
-from cerebro.core.orchestrator import Cerebro
-
-__all__ = ["Cerebro"]
-
+__all__ = []

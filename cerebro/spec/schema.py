@@ -8,7 +8,7 @@ import yaml
 
 class AdstockConfig(BaseModel):
     """Adstock transformation configuration"""
-    type: Literal["geometric", "weibull", "delayed", "carryover", "exponential"]
+    type: Literal["geometric", "delayed", "carryover", "exponential"]
     max_lag: int = Field(ge=1, le=52, description="Maximum lag periods")
     
     # Prior configurations (optional, will use defaults if not specified)
@@ -75,9 +75,25 @@ class PriorsConfig(BaseModel):
     sigma: str = "half_normal(100)"
 
 
+class AdvancedModelConfig(BaseModel):
+    """Advanced model structure (TVPs, correlated priors). Default True for agentic modeling."""
+    time_varying_parameters: bool = Field(
+        True,
+        description="If True, channel coefficients evolve over time (e.g. random walk); requires priors for TVP process."
+    )
+    correlated_channel_priors: bool = Field(
+        True,
+        description="If True, use MultivariateNormal with Cholesky/LKJ for channel coefficients instead of independent priors."
+    )
+    tvp_prior_scale: Optional[str] = Field(
+        "half_normal(0.05)",
+        description="Prior for TVP innovation scale, e.g. 'half_normal(0.05)' for random walk sigma."
+    )
+
+
 class InferenceConfig(BaseModel):
     """Inference configuration"""
-    backend: Literal["auto", "numpyro_svi", "numpyro_nuts", "pymc", "stan"] = "auto"
+    backend: Literal["auto", "jax_optim", "numpyro_svi", "numpyro_nuts", "pymc", "stan"] = "auto"
     
     # SVI specific
     optimizer: Optional[str] = "adam"
@@ -116,6 +132,12 @@ class MMMSpec(BaseModel):
     controls: Optional[List[str]] = []
     hierarchy: Optional[HierarchyConfig] = None
     
+    # Advanced structure (TVPs, multivariate priors). Default enabled for agentic modeling.
+    advanced: Optional[AdvancedModelConfig] = Field(
+        default_factory=lambda: AdvancedModelConfig(),
+        description="When omitted, defaults to time_varying_parameters=True, correlated_channel_priors=True."
+    )
+    
     # Priors and inference
     priors: PriorsConfig = PriorsConfig()
     inference: InferenceConfig = InferenceConfig()
@@ -139,9 +161,29 @@ class MMMSpec(BaseModel):
     
     def to_yaml(self, output_path: str):
         """Save spec to YAML file"""
+        import numpy as np
+        
+        def convert_numpy_types(obj):
+            """Recursively convert numpy types to native Python types"""
+            if isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, dict):
+                return {k: convert_numpy_types(v) for k, v in obj.items()}
+            elif isinstance(obj, (list, tuple)):
+                return [convert_numpy_types(item) for item in obj]
+            else:
+                return obj
+        
+        spec_dict = self.dict(exclude_none=True)
+        spec_dict = convert_numpy_types(spec_dict)
+        
         with open(output_path, 'w') as f:
             yaml.dump(
-                self.dict(exclude_none=True),
+                spec_dict,
                 f,
                 default_flow_style=False,
                 sort_keys=False
@@ -176,7 +218,7 @@ if __name__ == "__main__":
                     spending_pattern="exponential diminishing returns"
                 ),
                 transform=ChannelTransform(
-                    adstock=AdstockConfig(type="weibull", max_lag=8),
+                    adstock=AdstockConfig(type="geometric", max_lag=8),
                     saturation=SaturationConfig(type="hill")
                 )
             ),
@@ -199,5 +241,5 @@ if __name__ == "__main__":
     
     # Load from YAML
     loaded = MMMSpec.from_yaml("/tmp/test_spec.yaml")
-    print("✅ Spec validated and loaded successfully!")
+    print("Spec validated and loaded successfully!")
 

@@ -67,6 +67,67 @@ class BaseAgent:
         
         logger.info(f"Initialized {agent_name}")
     
+    def _reason_about_task(self, spec, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Chain of Thought reasoning BEFORE code generation.
+        
+        This is the key to better code generation:
+        1. First, reason about the requirements
+        2. Then, generate code based on that reasoning
+        
+        Args:
+            spec: MMMSpec object with data context
+            context: Additional context (data_path, etc.)
+            
+        Returns:
+            dict with reasoning outputs:
+            - 'data_format': Understanding of data structure
+            - 'required_operations': List of operations needed
+            - 'execution_order': Step-by-step plan
+            - 'potential_issues': What could go wrong
+            - 'validation_checks': What to verify
+        """
+        reasoning_prompt = self._get_reasoning_prompt(spec, context)
+        
+        if not reasoning_prompt:
+            # Agent doesn't implement COT reasoning yet
+            return {}
+        
+        logger.info(f"[{self.agent_name}]  Reasoning about task...")
+        
+        # LLM generates structured reasoning
+        reasoning_output = self.llm.reason(reasoning_prompt)
+        
+        # Try to parse as JSON
+        import json
+        try:
+            if '```json' in reasoning_output:
+                reasoning_output = reasoning_output.split('```json')[1].split('```')[0].strip()
+            elif '```' in reasoning_output:
+                reasoning_output = reasoning_output.split('```')[1].split('```')[0].strip()
+            
+            reasoning = json.loads(reasoning_output)
+            logger.info(f"[{self.agent_name}]  Reasoning complete")
+            return reasoning
+        except Exception as e:
+            logger.warning(f"[{self.agent_name}] Could not parse reasoning JSON: {e}")
+            # Return raw text as fallback
+            return {'reasoning_text': reasoning_output}
+    
+    def _get_reasoning_prompt(self, spec, context: Dict[str, Any]) -> str:
+        """
+        Generate COT reasoning prompt for this agent.
+        Should be overridden by subclasses that support COT.
+        
+        Args:
+            spec: MMMSpec object
+            context: Additional context
+            
+        Returns:
+            Reasoning prompt string, or empty string if not implemented
+        """
+        return ""  # Default: no COT reasoning
+    
     def get_task_prompt(self, state: Dict[str, Any]) -> str:
         """
         Generate prompt for this agent's specific task.
@@ -246,7 +307,7 @@ class BaseAgent:
                         code = code.replace(f"'{col_ref}'", f"'{actual_col}'")
                         code = code.replace(f'"{col_ref}"', f'"{actual_col}"')
                         
-                        fixes_applied.append(f"Fixed invalid column: {col_ref[:30]}... → {actual_col[:30]}...")
+                        fixes_applied.append(f"Fixed invalid column: {col_ref[:30]}... -> {actual_col[:30]}...")
                     else:
                         logger.error(f"Column '{col_ref}' not found in data and no close match!")
         
@@ -343,7 +404,7 @@ class BaseAgent:
     
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Main execution: Generate → Validate → Execute → Return
+        Main execution: Generate �� Validate �� Execute �� Return
         
         Args:
             state: Current pipeline state
@@ -380,7 +441,7 @@ class BaseAgent:
             
             # Check execution success
             if 'error' not in results:
-                logger.info(f"[{self.agent_name}] ✓ Execution succeeded!")
+                logger.info(f"[{self.agent_name}]  Execution succeeded!")
                 
                 # Validate business logic (agent-specific validation)
                 if self.use_results_judge and self.results_judge:
@@ -472,6 +533,6 @@ class BaseAgent:
             logger.info(f"[{self.agent_name}] Code updated for retry")
         
         # Failed after all iterations
-        logger.error(f"[{self.agent_name}] ✗ Failed after {max_iterations} attempts")
+        logger.error(f"[{self.agent_name}] � Failed after {max_iterations} attempts")
         return {'error': f'{self.agent_name} failed after {max_iterations} attempts'}
 
